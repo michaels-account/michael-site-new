@@ -9,6 +9,7 @@ window.Webflow.push(() => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
+    let testVariable;
     const context = canvas.getContext('2d');
 
     let mousePositions = [];
