@@ -4,6 +4,7 @@ window.Webflow ||= [];
 window.Webflow.push(() => {
   window.onload = function () {
     const canvas = document.querySelector('.canvas_draw');
+    const canvasContainer = document.querySelector('.canvas');
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -18,16 +19,33 @@ window.Webflow.push(() => {
     context.lineCap = 'round';
 
     let shouldPaint = false;
-    let erasing = false;
+    let erasingLines = false;
+
+    let eraserSelected = false;
+    let erasable;
+    const eraserRender = document.querySelector('.eraser');
+    const linkBlocks = Array.from(document.getElementsByClassName('link-block'));
+
+    $('.text-erasable').each(function (index) {
+      let characters = $(this).text().split('');
+      let splitCharacters = $(this);
+      splitCharacters.empty();
+      $.each(characters, function (i, el) {
+        //splitCharacters.append('<span class="letter-' + i + '">' + el + '</span>');
+        splitCharacters.append('<span class="erasable">' + el + '</span>');
+      });
+      erasable = document.getElementsByClassName('erasable');
+    });
 
     document.addEventListener('mousedown', function (event) {
-      console.log(erasing);
-      if (erasing) {
+      if (erasingLines || eraserSelected) {
         context.clearRect(0, 0, canvas.width, canvas.height);
+        eraserRender.style.display = 'none';
         mousePositions.length = 0;
         erasePositions.length = 0;
-        erasing = false;
+        erasingLines = false;
       }
+      if (eraserSelected === true) return;
       shouldPaint = true;
       context.globalCompositeOperation = 'source-over';
       context.lineWidth = 10;
@@ -49,6 +67,7 @@ window.Webflow.push(() => {
 
     document.addEventListener('mousemove', function (event) {
       if (shouldPaint == true) {
+        event.preventDefault();
         mousePositions.push({
           x: event.pageX,
           y: event.pageY,
@@ -65,7 +84,7 @@ window.Webflow.push(() => {
       if (shouldPaint === true) {
         context.beginPath();
         context.moveTo(mousePositions[0].x, mousePositions[0].y);
-        for (let i = 1; i < mousePositions.length; i++)
+        for (let i = 0; i < mousePositions.length; i++)
           context.lineTo(mousePositions[i].x, mousePositions[i].y);
         context.stroke();
       }
@@ -77,25 +96,92 @@ window.Webflow.push(() => {
     const waitErase = async () => {
       for (let i = 0; i < 3; i++) {
         if (shouldPaint === true) return;
-        console.log(`Waiting ${i} seconds...`);
         await sleep(i * 1000);
       }
-      if (shouldPaint === true) return;
+      if (shouldPaint === true || eraserSelected) return;
       startErase();
       console.log('Done');
     };
 
     const startErase = async () => {
-      erasing = true;
+      erasingLines = true;
+      eraserRender.style.left = erasePositions[0].x - eraserRender.offsetWidth / 2 + 'px';
+      eraserRender.style.top = erasePositions[0].y - eraserRender.offsetHeight / 2 + 'px';
+      eraserRender.style.display = 'block';
+      eraserRender.style.zIndex = '3';
       context.globalCompositeOperation = 'destination-out';
       context.lineWidth = 20;
       context.beginPath();
       for (let i = 0; i < erasePositions.length; i++) {
         await sleep(50);
+        eraserRender.style.left = erasePositions[i].x - eraserRender.offsetWidth / 2 + 'px';
+        eraserRender.style.top = erasePositions[i].y - eraserRender.offsetHeight / 2 + 'px';
         context.lineTo(erasePositions[i].x, erasePositions[i].y);
         context.stroke();
       }
+      eraserRender.style.display = 'none';
     };
     animate();
+
+    dragEraser(eraserRender);
+
+    function dragEraser(element) {
+      let pos1 = 0;
+      let pos2 = 0;
+      let pos3 = 0;
+      let pos4 = 0;
+      element.onmousedown = dragMouseDown;
+
+      function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        eraserSelected = true;
+        canvasContainer.style.display = 'none';
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        // call a function whenever the cursor moves:
+        document.onmousemove = elementDrag;
+      }
+      function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        // calculate the new cursor position:
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        // set the element's new position:
+        element.style.top = element.offsetTop - pos2 + 'px';
+        element.style.left = element.offsetLeft - pos1 + 'px';
+        eraserRender.style.zIndex = '-1'; //needs to be under for mouseover to affect spans and images
+        linkBlocks.forEach((element) => {
+          element.style.zIndex = '-1';
+        });
+        for (let e of erasable) {
+          e.addEventListener('mouseover', setOpacity);
+        }
+      }
+
+      function setOpacity() {
+        this.style.opacity = 0;
+      }
+
+      function closeDragElement() {
+        // stop moving when mouse button is released:
+        eraserSelected = false;
+        eraserRender.style.display = 'none';
+        canvasContainer.style.display = 'block';
+        for (let e of erasable) {
+          e.style.opacity = 1;
+          e.removeEventListener('mouseover', setOpacity);
+        }
+        linkBlocks.forEach((element) => {
+          element.style.zIndex = '2';
+        });
+        document.onmouseup = null;
+        document.onmousemove = null;
+      }
+    }
   };
 });
