@@ -3,6 +3,9 @@ import { greetUser } from '$utils/greet';
 window.Webflow ||= [];
 window.Webflow.push(() => {
   window.onload = function () {
+    if ('ontouchstart' in window) {
+      return;
+    }
     const canvas = document.querySelector('.canvas_draw');
     const canvasContainer = document.querySelector('.canvas');
 
@@ -10,11 +13,13 @@ window.Webflow.push(() => {
     canvas.height = window.innerHeight;
 
     const context = canvas.getContext('2d');
+    const colours = ['#F94432', '#8C8C54', '#8324CE', '#919AF9', '#F77514', '#3939D3'];
+    let colourIndex = 0;
 
     let mousePositions = [];
     let erasePositions = [];
 
-    context.strokeStyle = '#ff4141';
+    //context.strokeStyle = '#ff4141';
     context.lineWidth = 10;
     context.lineCap = 'round';
 
@@ -38,9 +43,11 @@ window.Webflow.push(() => {
     });
 
     document.addEventListener('mousedown', function (event) {
-      if (erasingLines || eraserSelected) {
+      if (erasingLines) {
         context.clearRect(0, 0, canvas.width, canvas.height);
-        eraserRender.style.display = 'none';
+        if (eraserSelected === false) {
+          eraserRender.style.display = 'none';
+        }
         mousePositions.length = 0;
         erasePositions.length = 0;
         erasingLines = false;
@@ -48,6 +55,8 @@ window.Webflow.push(() => {
       if (eraserSelected === true) return;
       shouldPaint = true;
       context.globalCompositeOperation = 'source-over';
+      context.strokeStyle = colours[colourIndex];
+      colourIndex = (colourIndex + 1) % colours.length;
       context.lineWidth = 10;
       mousePositions.push({
         x: event.pageX,
@@ -61,6 +70,8 @@ window.Webflow.push(() => {
 
     document.addEventListener('mouseup', function (event) {
       shouldPaint = false;
+      console.log(mousePositions);
+      console.log(erasePositions);
       mousePositions.length = 0;
       waitErase();
     });
@@ -99,21 +110,27 @@ window.Webflow.push(() => {
         await sleep(i * 1000);
       }
       if (shouldPaint === true || eraserSelected) return;
-      startErase();
-      console.log('Done');
+      if (
+        erasePositions !== null &&
+        typeof erasePositions !== 'undefined' &&
+        erasePositions.length > 0
+      ) {
+        startErase();
+      }
     };
 
     const startErase = async () => {
       erasingLines = true;
+      eraserRender.style.display = 'block';
       eraserRender.style.left = erasePositions[0].x - eraserRender.offsetWidth / 2 + 'px';
       eraserRender.style.top = erasePositions[0].y - eraserRender.offsetHeight / 2 + 'px';
-      eraserRender.style.display = 'block';
       eraserRender.style.zIndex = '3';
       context.globalCompositeOperation = 'destination-out';
       context.lineWidth = 20;
       context.beginPath();
+
       for (let i = 0; i < erasePositions.length; i++) {
-        await sleep(50);
+        await sleep(100);
         eraserRender.style.left = erasePositions[i].x - eraserRender.offsetWidth / 2 + 'px';
         eraserRender.style.top = erasePositions[i].y - eraserRender.offsetHeight / 2 + 'px';
         context.lineTo(erasePositions[i].x, erasePositions[i].y);
