@@ -8,6 +8,7 @@ window.Webflow.push(() => {
     }
     const canvas = document.querySelector('.canvas_draw');
     const canvasContainer = document.querySelector('.canvas');
+    canvasContainer.style.display = 'block';
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -35,28 +36,47 @@ window.Webflow.push(() => {
 
     let erasePositions = [];
 
-    context.strokeStyle = '#ff4141';
-    context.lineWidth = 10;
     context.lineCap = 'round';
 
     let isDrawing = false;
     let isErasing = false;
     let lastX = 0;
     let lastY = 0;
+    let timeoutId;
 
     function handleMouseDown(event) {
       event.preventDefault();
+      if (isErasing) {
+        isErasing = false;
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        erasePositions.length = 0;
+      }
       isDrawing = true;
       [lastX, lastY] = [event.clientX, event.clientY];
       erasePositions.push({
         x: lastX,
         y: lastY,
       });
+      if (eraserSelected) return;
+      interrupt();
+      context.globalCompositeOperation = 'source-over';
+      context.strokeStyle = colours[colourIndex];
+      colourIndex = (colourIndex + 1) % colours.length;
+      context.lineWidth = 10;
+
+      //to draw dots on click instead of needing to drag
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      context.beginPath();
+      context.moveTo(lastX, lastY);
+      context.lineTo(x, y);
+      context.stroke();
     }
 
     function handleMouseMove(event) {
       event.preventDefault();
-      if (!isDrawing) return;
+      if (!isDrawing || eraserSelected) return;
       const rect = canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
@@ -75,10 +95,19 @@ window.Webflow.push(() => {
     function handleMouseUp() {
       isDrawing = false;
       context.closePath();
-      handleErase();
+      waitAndCall(handleErase, 3000);
+    }
+
+    function waitAndCall(callback, milliseconds) {
+      timeoutId = setTimeout(callback, milliseconds);
+    }
+
+    function interrupt() {
+      clearTimeout(timeoutId);
     }
 
     const handleErase = () => {
+      if (erasePositions.length <= 0) return;
       isErasing = true;
       eraserRender.style.display = 'block';
       eraserRender.style.position = 'fixed';
@@ -86,25 +115,22 @@ window.Webflow.push(() => {
       eraserRender.style.top = erasePositions[0].y - eraserRender.offsetHeight / 2 + 'px';
       eraserRender.style.zIndex = '3';
       context.globalCompositeOperation = 'destination-out';
-      context.lineWidth = 20;
+      context.lineWidth = 75;
       context.beginPath();
 
       function erase() {
-        if (erasePositions.length === 0) {
+        if (erasePositions.length === 0 || (isDrawing && !eraserSelected)) {
           eraserRender.style.display = 'none';
+          isErasing = false;
           return;
         }
-
         const erasePosition = erasePositions.shift();
-        console.log(erasePosition);
-        eraserRender.style.left = erasePositions[0].x - eraserRender.offsetWidth / 2 + 'px';
-        eraserRender.style.top = erasePositions[0].y - eraserRender.offsetHeight / 2 + 'px';
-        context.lineTo(erasePositions[0].x, erasePositions[0].y);
+        eraserRender.style.left = erasePosition.x - eraserRender.offsetWidth / 2 + 'px';
+        eraserRender.style.top = erasePosition.y - eraserRender.offsetHeight / 2 + 'px';
+        context.lineTo(erasePosition.x, erasePosition.y);
         context.stroke();
-
-        requestAnimationFrame(erase);
+        if (!eraserSelected) requestAnimationFrame(erase);
       }
-
       erase();
     };
 
