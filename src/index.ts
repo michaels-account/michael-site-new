@@ -1,8 +1,12 @@
 import { greetUser } from '$utils/greet';
 
 interface Point {
-  X: number;
-  Y: number;
+  x: number;
+  y: number;
+}
+
+interface Line {
+  points: Point[];
 }
 
 window.Webflow ||= [];
@@ -40,8 +44,8 @@ window.Webflow.push(() => {
     });
 
     let erasePositions = [];
-    let lines: Point[][] = [];
-    let currentLine: Point[] = [];
+    let lines: Line[] = [];
+    let currentLine: Line;
     let lastErasePosition = { x: 0, y: 0 }; //TO CHANGE
 
     context.lineCap = 'round';
@@ -66,7 +70,7 @@ window.Webflow.push(() => {
         y: lastY,
       });
       // reset the current line
-      currentLine = [{ X: lastX, Y: lastY }];
+      currentLine = { points: [{ x: lastX, y: lastY }] };
 
       if (eraserSelected) return;
       clearTimeout(timeoutId);
@@ -97,6 +101,8 @@ window.Webflow.push(() => {
       context.lineTo(x, y);
       context.stroke();
       [lastX, lastY] = [x, y];
+      // add a new point to the current line
+      currentLine.points.push({ x, y });
       erasePositions.push({
         x: lastX,
         y: lastY,
@@ -106,52 +112,80 @@ window.Webflow.push(() => {
     function handleMouseUp() {
       isDrawing = false;
       context.closePath();
+      // add the line to the list of lines to erase
+      lines.push(currentLine);
+      console.log({ lines });
+
       timeoutId = setTimeout(handleErase, 3000);
     }
 
-    function waitAndCall(callback, milliseconds) {
-      timeoutId = setTimeout(callback, milliseconds);
-    }
-
-    function interrupt() {
-      clearTimeout(timeoutId);
-    }
     const deltaTime = 1000 / 20;
     let lastTimestamp = 0;
 
     const handleErase = () => {
-      if (erasePositions.length <= 0) return;
+      // if there are no more lines left to erase, we're done, so return immediately.
+      if (lines.length <= 0) return;
       isErasing = true;
+      // display the eraser on the HTML page
       eraserRender.style.display = 'block';
       eraserRender.style.position = 'fixed';
-      eraserRender.style.left = erasePositions[0].x - eraserRender.offsetWidth / 2 + 'px';
-      eraserRender.style.top = erasePositions[0].y - eraserRender.offsetHeight / 2 + 'px';
+      let lineBeingErased = lines.shift();
+      if (lineBeingErased === undefined) {
+        // no more lines left to erase
+        eraserRender.style.display = 'none';
+        return;
+      }
+
+      // set the position of the eraser to be the first point on the first line
+      eraserRender.style.left = lineBeingErased.points[0].x - eraserRender.offsetWidth / 2 + 'px';
+      eraserRender.style.top = lineBeingErased.points[0].y - eraserRender.offsetHeight / 2 + 'px';
       eraserRender.style.zIndex = '3';
       context.globalCompositeOperation = 'destination-out';
       context.lineWidth = 75;
       context.beginPath();
 
-      function erase(timestamp) {
-        if (erasePositions.length === 0 || (isDrawing && !eraserSelected)) {
+      /**
+       * Recursively called with `setAnimationFrame`.
+       */
+      function erase(timestamp: number) {
+        console.log({ lineBeingErased });
+        if (isDrawing && !eraserSelected) {
           eraserRender.style.display = 'none';
           isErasing = false;
           return;
         }
-        let elapsed = timestamp - lastTimestamp;
+        const elapsed = timestamp - lastTimestamp;
         lastTimestamp = timestamp;
-        for (let i = 0; i < elapsed / deltaTime; i++) {
-          const erasePosition = erasePositions.shift();
-          const distanceErasePositionX = Math.abs(erasePosition.x - lastErasePosition.x);
-          const distanceErasePositionY = Math.abs(erasePosition.y - lastErasePosition.y);
-          const averageDistance = (distanceErasePositionX + distanceErasePositionY) / 2;
-          if (averageDistance >= 100) {
-            console.log('average distance > 100');
+        if (elapsed > deltaTime) {
+          const erasePosition = lineBeingErased?.points.shift();
+          // if erasePosition is undefined, there are no more points remaining in the line to be erased.
+          // wait for 2 seconds and then erase the next line.
+          if (erasePosition === undefined) {
+            lineBeingErased = lines.shift();
+            if (lineBeingErased === undefined) {
+              // no more lines left to erase
+              eraserRender.style.display = 'none';
+              return;
+            }
+            console.log('finishedline');
             timeoutId = setTimeout(() => {
               requestAnimationFrame(erase);
             }, 2000);
-            lastErasePosition = erasePosition;
+            // lastErasePosition = erasePosition;
             return;
           }
+
+          // const distanceErasePositionX = Math.abs(erasePosition.x - lastErasePosition.x);
+          // const distanceErasePositionY = Math.abs(erasePosition.y - lastErasePosition.y);
+          // const averageDistance = (distanceErasePositionX + distanceErasePositionY) / 2;
+          // if (averageDistance >= 100) {
+          //   console.log('average distance > 100');
+          //   timeoutId = setTimeout(() => {
+          //     requestAnimationFrame(erase);
+          //   }, 2000);
+          //   lastErasePosition = erasePosition;
+          //   return;
+          // }
           eraserRender.style.left = erasePosition.x - eraserRender.offsetWidth / 2 + 'px';
           eraserRender.style.top = erasePosition.y - eraserRender.offsetHeight / 2 + 'px';
           context.lineTo(erasePosition.x, erasePosition.y);
@@ -160,6 +194,7 @@ window.Webflow.push(() => {
         }
         if (!eraserSelected) requestAnimationFrame(erase);
       }
+      // call the erase function to kick off the animation
       requestAnimationFrame(function (timestamp) {
         lastTimestamp = timestamp;
         erase(timestamp);
