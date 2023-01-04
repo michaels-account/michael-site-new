@@ -1,5 +1,10 @@
 import { greetUser } from '$utils/greet';
 
+interface Point {
+  X: number;
+  Y: number;
+}
+
 window.Webflow ||= [];
 window.Webflow.push(() => {
   window.onload = function () {
@@ -35,6 +40,9 @@ window.Webflow.push(() => {
     });
 
     let erasePositions = [];
+    let lines: Point[][] = [];
+    let currentLine: Point[] = [];
+    let lastErasePosition = { x: 0, y: 0 }; //TO CHANGE
 
     context.lineCap = 'round';
 
@@ -42,7 +50,7 @@ window.Webflow.push(() => {
     let isErasing = false;
     let lastX = 0;
     let lastY = 0;
-    let timeoutId;
+    let timeoutId: number | undefined;
 
     function handleMouseDown(event) {
       event.preventDefault();
@@ -57,8 +65,11 @@ window.Webflow.push(() => {
         x: lastX,
         y: lastY,
       });
+      // reset the current line
+      currentLine = [{ X: lastX, Y: lastY }];
+
       if (eraserSelected) return;
-      interrupt();
+      clearTimeout(timeoutId);
       context.globalCompositeOperation = 'source-over';
       context.strokeStyle = colours[colourIndex];
       colourIndex = (colourIndex + 1) % colours.length;
@@ -95,7 +106,7 @@ window.Webflow.push(() => {
     function handleMouseUp() {
       isDrawing = false;
       context.closePath();
-      waitAndCall(handleErase, 3000);
+      timeoutId = setTimeout(handleErase, 3000);
     }
 
     function waitAndCall(callback, milliseconds) {
@@ -105,6 +116,8 @@ window.Webflow.push(() => {
     function interrupt() {
       clearTimeout(timeoutId);
     }
+    const deltaTime = 1000 / 20;
+    let lastTimestamp = 0;
 
     const handleErase = () => {
       if (erasePositions.length <= 0) return;
@@ -118,20 +131,39 @@ window.Webflow.push(() => {
       context.lineWidth = 75;
       context.beginPath();
 
-      function erase() {
+      function erase(timestamp) {
         if (erasePositions.length === 0 || (isDrawing && !eraserSelected)) {
           eraserRender.style.display = 'none';
           isErasing = false;
           return;
         }
-        const erasePosition = erasePositions.shift();
-        eraserRender.style.left = erasePosition.x - eraserRender.offsetWidth / 2 + 'px';
-        eraserRender.style.top = erasePosition.y - eraserRender.offsetHeight / 2 + 'px';
-        context.lineTo(erasePosition.x, erasePosition.y);
-        context.stroke();
+        let elapsed = timestamp - lastTimestamp;
+        lastTimestamp = timestamp;
+        for (let i = 0; i < elapsed / deltaTime; i++) {
+          const erasePosition = erasePositions.shift();
+          const distanceErasePositionX = Math.abs(erasePosition.x - lastErasePosition.x);
+          const distanceErasePositionY = Math.abs(erasePosition.y - lastErasePosition.y);
+          const averageDistance = (distanceErasePositionX + distanceErasePositionY) / 2;
+          if (averageDistance >= 100) {
+            console.log('average distance > 100');
+            timeoutId = setTimeout(() => {
+              requestAnimationFrame(erase);
+            }, 2000);
+            lastErasePosition = erasePosition;
+            return;
+          }
+          eraserRender.style.left = erasePosition.x - eraserRender.offsetWidth / 2 + 'px';
+          eraserRender.style.top = erasePosition.y - eraserRender.offsetHeight / 2 + 'px';
+          context.lineTo(erasePosition.x, erasePosition.y);
+          context.stroke();
+          lastErasePosition = erasePosition;
+        }
         if (!eraserSelected) requestAnimationFrame(erase);
       }
-      erase();
+      requestAnimationFrame(function (timestamp) {
+        lastTimestamp = timestamp;
+        erase(timestamp);
+      });
     };
 
     window.addEventListener('mousedown', handleMouseDown);
