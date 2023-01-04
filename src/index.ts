@@ -156,42 +156,42 @@ window.Webflow.push(() => {
         }
         const elapsed = timestamp - lastTimestamp;
         lastTimestamp = timestamp;
-        if (elapsed > deltaTime) {
-          const erasePosition = lineBeingErased?.points.shift();
-          // if erasePosition is undefined, there are no more points remaining in the line to be erased.
-          // wait for 2 seconds and then erase the next line.
-          if (erasePosition === undefined) {
-            lineBeingErased = lines.shift();
-            if (lineBeingErased === undefined) {
-              // no more lines left to erase
-              eraserRender.style.display = 'none';
-              return;
-            }
-            console.log('finishedline');
-            timeoutId = setTimeout(() => {
-              requestAnimationFrame(erase);
-            }, 2000);
-            // lastErasePosition = erasePosition;
+        //if (elapsed > deltaTime) {
+        const erasePosition = lineBeingErased?.points.shift();
+        // if erasePosition is undefined, there are no more points remaining in the line to be erased.
+        // wait for 2 seconds and then erase the next line.
+        if (erasePosition === undefined) {
+          lineBeingErased = lines.shift();
+          if (lineBeingErased === undefined) {
+            // no more lines left to erase
+            eraserRender.style.display = 'none';
             return;
           }
-
-          // const distanceErasePositionX = Math.abs(erasePosition.x - lastErasePosition.x);
-          // const distanceErasePositionY = Math.abs(erasePosition.y - lastErasePosition.y);
-          // const averageDistance = (distanceErasePositionX + distanceErasePositionY) / 2;
-          // if (averageDistance >= 100) {
-          //   console.log('average distance > 100');
-          //   timeoutId = setTimeout(() => {
-          //     requestAnimationFrame(erase);
-          //   }, 2000);
-          //   lastErasePosition = erasePosition;
-          //   return;
-          // }
-          eraserRender.style.left = erasePosition.x - eraserRender.offsetWidth / 2 + 'px';
-          eraserRender.style.top = erasePosition.y - eraserRender.offsetHeight / 2 + 'px';
-          context.lineTo(erasePosition.x, erasePosition.y);
-          context.stroke();
-          lastErasePosition = erasePosition;
+          console.log('finishedline');
+          timeoutId = setTimeout(() => {
+            requestAnimationFrame(erase);
+          }, 2000);
+          // lastErasePosition = erasePosition;
+          return;
         }
+
+        // const distanceErasePositionX = Math.abs(erasePosition.x - lastErasePosition.x);
+        // const distanceErasePositionY = Math.abs(erasePosition.y - lastErasePosition.y);
+        // const averageDistance = (distanceErasePositionX + distanceErasePositionY) / 2;
+        // if (averageDistance >= 100) {
+        //   console.log('average distance > 100');
+        //   timeoutId = setTimeout(() => {
+        //     requestAnimationFrame(erase);
+        //   }, 2000);
+        //   lastErasePosition = erasePosition;
+        //   return;
+        // }
+        eraserRender.style.left = erasePosition.x - eraserRender.offsetWidth / 2 + 'px';
+        eraserRender.style.top = erasePosition.y - eraserRender.offsetHeight / 2 + 'px';
+        context.lineTo(erasePosition.x, erasePosition.y);
+        context.stroke();
+        lastErasePosition = erasePosition;
+        //}
         if (!eraserSelected) requestAnimationFrame(erase);
       }
       // call the erase function to kick off the animation
