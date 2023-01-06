@@ -48,6 +48,8 @@ window.Webflow.push(() => {
     let currentLine: Line;
 
     context.lineCap = 'round';
+    context.imageSmoothingEnabled = false;
+    context.mozImageSmoothingEnabled = false;
 
     let isDrawing = false;
     let isErasing = false;
@@ -141,7 +143,7 @@ window.Webflow.push(() => {
       eraserRender.style.top = lineBeingErased.points[0].y - eraserRender.offsetHeight / 2 + 'px';
       eraserRender.style.zIndex = '3';
       context.globalCompositeOperation = 'destination-out';
-      context.lineWidth = 75;
+      context.lineWidth = 20;
       context.beginPath();
       /**
        * Recursively called with `setAnimationFrame`.
