@@ -18,22 +18,35 @@ window.Webflow.push(() => {
 
     const canvas = document.querySelector('.canvas_draw');
     const canvasContainer = document.querySelector('.canvas');
+    const context = canvas.getContext('2d');
     canvasContainer.style.display = 'block';
     canvasContainer.style.pointerEvents = 'none';
 
-    const context = canvas.getContext('2d');
+    // Set the canvas width and height to the size of the container element
+    canvas.width = canvasContainer.clientWidth;
+    canvas.height = canvasContainer.clientHeight;
+
+    // Scale the canvas by the device pixel ratio
+    canvas.style.width = canvas.width + 'px';
+    canvas.style.height = canvas.height + 'px';
+    canvas.width *= window.devicePixelRatio;
+    canvas.height *= window.devicePixelRatio;
+
+    // Set the canvas scaling for the context
+    context.scale(window.devicePixelRatio, window.devicePixelRatio);
+
     const colours = ['#F24B3A', '#8C8C54', '#8324CE', '#919AF9', '#F77514', '#3939D3'];
     context.translate(0.5, 0.5);
     let colourIndex = 0;
 
-    canvasContainer.style.width = window.innerWidth + 'px';
-    canvasContainer.style.width = window.innerHeight + 'px';
+    // canvasContainer.style.width = window.innerWidth + 'px';
+    // canvasContainer.style.width = window.innerHeight + 'px';
 
-    const scale = window.devicePixelRatio;
-    canvas.width = window.innerWidth * scale;
-    canvas.height = window.innerHeight * scale;
+    // const scale = window.devicePixelRatio;
+    // canvas.width = window.innerWidth * scale;
+    // canvas.height = window.innerHeight * scale;
+    // context.scale(scale, scale);
 
-    context.scale(scale, scale);
     let eraserSelected = false;
     let erasable;
     const eraserRender = document.querySelector('.eraser');
@@ -126,10 +139,8 @@ window.Webflow.push(() => {
       timeoutId = setTimeout(handleErase, 3000);
     }
 
-    //used to hopefully set a constant framerate for erasing animation
-    const targetFPS = 60;
-    const deltaTime = 1000 / targetFPS;
-    let lastTimestamp = 0;
+    let lastTimestamp;
+    let deltaLoop = 0;
 
     const handleErase = () => {
       // if there are no more lines left to erase, we're done, so return immediately.
@@ -147,6 +158,7 @@ window.Webflow.push(() => {
         return;
       }
       // set the position of the eraser to be the first point on the first line
+      console.log(lines);
       eraserRender.style.left = lineBeingErased.points[0].x - eraserRender.offsetWidth / 2 + 'px';
       eraserRender.style.top = lineBeingErased.points[0].y - eraserRender.offsetHeight / 2 + 'px';
       eraserRender.style.zIndex = '3';
@@ -162,10 +174,23 @@ window.Webflow.push(() => {
           isErasing = false;
           return;
         }
-        //framerate using deltatime calculations
+        if (lastTimestamp === undefined) {
+          lastTimestamp = timestamp;
+        }
+        // Calculate the elapsed time since the last frame
         const elapsed = timestamp - lastTimestamp;
         lastTimestamp = timestamp;
-        if (elapsed >= deltaTime) {
+
+        // Calculate the desired frame rate, in frames per second
+        const frameRate = 60;
+        // Calculate the desired frame duration, in milliseconds
+        const frameDuration = 1000 / frameRate;
+        // Calculate the desired amount of work to do each frame, based on the frame duration and the elapsed time
+        const deltaTime = Math.min(elapsed / frameDuration, 1);
+        deltaLoop += deltaTime;
+        console.log('deltaLoop' + deltaLoop);
+        if (deltaLoop > 1) {
+          deltaLoop = 0;
           const erasePosition = lineBeingErased?.points.shift();
           // if erasePosition is undefined, there are no more points remaining in the line to be erased.
           // wait for a set amount of time and then erase the next line.
@@ -191,7 +216,7 @@ window.Webflow.push(() => {
         if (!eraserSelected) requestAnimationFrame(erase);
       }
       // call the erase function to kick off the animation
-      requestAnimationFrame(function (timestamp) {
+      window.requestAnimationFrame(function (timestamp) {
         lastTimestamp = timestamp;
         erase(timestamp);
       });
