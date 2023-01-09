@@ -20,16 +20,23 @@ window.Webflow.push(() => {
     canvasContainer.style.display = 'block';
     canvasContainer.style.pointerEvents = 'none';
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
     const context = canvas.getContext('2d');
     const colours = ['#F94432', '#8C8C54', '#8324CE', '#919AF9', '#F77514', '#3939D3'];
+    context.translate(0.5, 0.5);
     let colourIndex = 0;
 
+    canvasContainer.style.width = window.innerWidth + 'px';
+    canvasContainer.style.width = window.innerHeight + 'px';
+
+    const scale = window.devicePixelRatio;
+    canvas.width = window.innerWidth * scale;
+    canvas.height = window.innerHeight * scale;
+
+    context.scale(scale, scale);
     let eraserSelected = false;
     let erasable;
     const eraserRender = document.querySelector('.eraser');
+    eraserRender.style.display = 'none';
 
     const linkBlocks = Array.from(document.getElementsByClassName('link-block'));
     //puts spans between each character for text on page so it they can be erased individually
@@ -80,7 +87,7 @@ window.Webflow.push(() => {
       context.globalCompositeOperation = 'source-over';
       context.strokeStyle = colours[colourIndex];
       colourIndex = (colourIndex + 1) % colours.length;
-      context.lineWidth = 10;
+      context.lineWidth = 9;
 
       //to draw dots on click instead of needing to drag
       const rect = canvas.getBoundingClientRect();
@@ -188,7 +195,9 @@ window.Webflow.push(() => {
         erase(timestamp);
       });
     };
-
+    //set cursor to pencil after draw function has loaded
+    document.body.style.cursor =
+      ' url(https://uploads-ssl.webflow.com/633e177d0f2820c16e144992/63b63e3f6e90d840a1798c7a_pencil.png), auto';
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
@@ -225,7 +234,7 @@ window.Webflow.push(() => {
         // set the element's new position:
         element.style.top = element.offsetTop - pos2 + 'px';
         element.style.left = element.offsetLeft - pos1 + 'px';
-        eraserRender.style.zIndex = '-1'; //needs to be under for mouseover to affect spans and images
+        eraserRender.style.pointerEvents = 'none';
         linkBlocks.forEach((element) => {
           element.style.zIndex = '-1';
         });
@@ -252,6 +261,7 @@ window.Webflow.push(() => {
         linkBlocks.forEach((element) => {
           element.style.zIndex = '2';
         });
+        eraserRender.style.pointerEvents = 'auto';
         document.onmouseup = null;
         document.onmousemove = null;
       }
