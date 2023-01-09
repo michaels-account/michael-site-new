@@ -15,13 +15,14 @@ window.Webflow.push(() => {
     if ('ontouchstart' in window) {
       return;
     }
+
     const canvas = document.querySelector('.canvas_draw');
     const canvasContainer = document.querySelector('.canvas');
     canvasContainer.style.display = 'block';
     canvasContainer.style.pointerEvents = 'none';
 
     const context = canvas.getContext('2d');
-    const colours = ['#F94432', '#8C8C54', '#8324CE', '#919AF9', '#F77514', '#3939D3'];
+    const colours = ['#F24B3A', '#8C8C54', '#8324CE', '#919AF9', '#F77514', '#3939D3'];
     context.translate(0.5, 0.5);
     let colourIndex = 0;
 
@@ -198,6 +199,11 @@ window.Webflow.push(() => {
     //set cursor to pencil after draw function has loaded
     document.body.style.cursor =
       ' url(https://uploads-ssl.webflow.com/633e177d0f2820c16e144992/63b63e3f6e90d840a1798c7a_pencil.png), auto';
+    // if someone dragged and selected items before canvas loaded in remove the selection
+    if (window.getSelection) {
+      window.getSelection().removeAllRanges();
+    }
+
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
