@@ -158,7 +158,6 @@ window.Webflow.push(() => {
         return;
       }
       // set the position of the eraser to be the first point on the first line
-      console.log(lines);
       eraserRender.style.left = lineBeingErased.points[0].x - eraserRender.offsetWidth / 2 + 'px';
       eraserRender.style.top = lineBeingErased.points[0].y - eraserRender.offsetHeight / 2 + 'px';
       eraserRender.style.zIndex = '3';
@@ -188,7 +187,6 @@ window.Webflow.push(() => {
         // Calculate the desired amount of work to do each frame, based on the frame duration and the elapsed time
         const deltaTime = Math.min(elapsed / frameDuration, 1);
         deltaLoop += deltaTime;
-        console.log('deltaLoop' + deltaLoop);
         if (deltaLoop > 1) {
           deltaLoop = 0;
           const erasePosition = lineBeingErased?.points.shift();
