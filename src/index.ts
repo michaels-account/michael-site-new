@@ -1,31 +1,46 @@
 import { greetUser } from '$utils/greet';
 
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface Line {
+  points: Point[];
+}
+
 window.Webflow ||= [];
 window.Webflow.push(() => {
   window.onload = function () {
+    if ('ontouchstart' in window) {
+      return;
+    }
+
     const canvas = document.querySelector('.canvas_draw');
     const canvasContainer = document.querySelector('.canvas');
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvasContainer.style.display = 'block';
+    canvasContainer.style.pointerEvents = 'none';
 
     const context = canvas.getContext('2d');
+    const colours = ['#F24B3A', '#8C8C54', '#8324CE', '#919AF9', '#F77514', '#3939D3'];
+    context.translate(0.5, 0.5);
+    let colourIndex = 0;
 
-    let mousePositions = [];
-    let erasePositions = [];
+    canvasContainer.style.width = window.innerWidth + 'px';
+    canvasContainer.style.width = window.innerHeight + 'px';
 
-    context.strokeStyle = '#ff4141';
-    context.lineWidth = 10;
-    context.lineCap = 'round';
+    const scale = window.devicePixelRatio;
+    canvas.width = window.innerWidth * scale;
+    canvas.height = window.innerHeight * scale;
 
-    let shouldPaint = false;
-    let erasingLines = false;
-
+    context.scale(scale, scale);
     let eraserSelected = false;
     let erasable;
     const eraserRender = document.querySelector('.eraser');
-    const linkBlocks = Array.from(document.getElementsByClassName('link-block'));
+    eraserRender.style.display = 'none';
 
+    const linkBlocks = Array.from(document.getElementsByClassName('link-block'));
+    //puts spans between each character for text on page so it they can be erased individually
     $('.text-erasable').each(function (index) {
       let characters = $(this).text().split('');
       let splitCharacters = $(this);
@@ -37,91 +52,161 @@ window.Webflow.push(() => {
       erasable = document.getElementsByClassName('erasable');
     });
 
-    document.addEventListener('mousedown', function (event) {
-      if (erasingLines || eraserSelected) {
+    let lines: Line[] = [];
+    let currentLine: Line;
+
+    context.lineCap = 'round';
+    context.imageSmoothingEnabled = false;
+    context.mozImageSmoothingEnabled = false;
+
+    let isDrawing = false;
+    let isErasing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let timeoutId: number | undefined;
+
+    function handleMouseDown(event) {
+      event.preventDefault();
+      //if erasing, delete all brush strokes on page and reset eraser
+      if (isErasing) {
+        isErasing = false;
         context.clearRect(0, 0, canvas.width, canvas.height);
+        //erasePositions.length = 0;
+        lines.length = 0;
+        currentLine.points.length = 0;
+      }
+      //removes eraser if clicking while the eraser is pausing
+      if (timeoutId !== undefined && !eraserSelected) {
         eraserRender.style.display = 'none';
-        mousePositions.length = 0;
-        erasePositions.length = 0;
-        erasingLines = false;
       }
-      if (eraserSelected === true) return;
-      shouldPaint = true;
+      clearTimeout(timeoutId);
+      if (eraserSelected) return;
+      isDrawing = true;
+      [lastX, lastY] = [event.clientX, event.clientY];
+      // reset the current line
+      currentLine = { points: [{ x: lastX, y: lastY }] };
       context.globalCompositeOperation = 'source-over';
-      context.lineWidth = 10;
-      mousePositions.push({
-        x: event.pageX,
-        y: event.pageY,
-      });
-      erasePositions.push({
-        x: event.pageX,
-        y: event.pageY,
-      });
-    });
+      context.strokeStyle = colours[colourIndex];
+      colourIndex = (colourIndex + 1) % colours.length;
+      context.lineWidth = 9;
 
-    document.addEventListener('mouseup', function (event) {
-      shouldPaint = false;
-      mousePositions.length = 0;
-      waitErase();
-    });
-
-    document.addEventListener('mousemove', function (event) {
-      if (shouldPaint == true) {
-        event.preventDefault();
-        mousePositions.push({
-          x: event.pageX,
-          y: event.pageY,
-        });
-        erasePositions.push({
-          x: event.pageX,
-          y: event.pageY,
-        });
-      }
-    });
-
-    function animate() {
-      requestAnimationFrame(animate);
-      if (shouldPaint === true) {
-        context.beginPath();
-        context.moveTo(mousePositions[0].x, mousePositions[0].y);
-        for (let i = 0; i < mousePositions.length; i++)
-          context.lineTo(mousePositions[i].x, mousePositions[i].y);
-        context.stroke();
-      }
+      //to draw dots on click instead of needing to drag
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      context.beginPath();
+      context.moveTo(lastX, lastY);
+      context.lineTo(x, y);
+      context.stroke();
     }
-    const sleep = (time) => {
-      return new Promise((resolve) => setTimeout(resolve, time));
-    };
 
-    const waitErase = async () => {
-      for (let i = 0; i < 3; i++) {
-        if (shouldPaint === true) return;
-        await sleep(i * 1000);
+    function handleMouseMove(event) {
+      event.preventDefault();
+      if (!isDrawing || eraserSelected) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      context.beginPath();
+      context.moveTo(lastX, lastY);
+      context.lineTo(x, y);
+      context.stroke();
+      [lastX, lastY] = [x, y];
+      // add a new point to the current line
+      currentLine.points.push({ x, y });
+    }
+
+    function handleMouseUp() {
+      if (!isDrawing || eraserSelected) return;
+      isDrawing = false;
+      context.closePath();
+      // add the line to the list of lines to erase
+      lines.push(currentLine);
+      //time in between brush strokes before eraser is activated
+      timeoutId = setTimeout(handleErase, 3000);
+    }
+
+    //used to hopefully set a constant framerate for erasing animation
+    const targetFPS = 60;
+    const deltaTime = 1000 / targetFPS;
+    let lastTimestamp = 0;
+
+    const handleErase = () => {
+      // if there are no more lines left to erase, we're done, so return immediately.
+      if (lines.length === 0 && currentLine.points.length === 0) {
+        return;
       }
-      if (shouldPaint === true || eraserSelected) return;
-      startErase();
-      console.log('Done');
-    };
-
-    const startErase = async () => {
-      erasingLines = true;
-      eraserRender.style.left = erasePositions[0].x - eraserRender.offsetWidth / 2 + 'px';
-      eraserRender.style.top = erasePositions[0].y - eraserRender.offsetHeight / 2 + 'px';
+      isErasing = true;
+      // display the eraser on the HTML page
       eraserRender.style.display = 'block';
+      eraserRender.style.position = 'fixed';
+      let lineBeingErased = lines.shift();
+      if (lineBeingErased === undefined) {
+        // no more lines left to erase
+        eraserRender.style.display = 'none';
+        return;
+      }
+      // set the position of the eraser to be the first point on the first line
+      eraserRender.style.left = lineBeingErased.points[0].x - eraserRender.offsetWidth / 2 + 'px';
+      eraserRender.style.top = lineBeingErased.points[0].y - eraserRender.offsetHeight / 2 + 'px';
       eraserRender.style.zIndex = '3';
       context.globalCompositeOperation = 'destination-out';
       context.lineWidth = 20;
       context.beginPath();
-      for (let i = 0; i < erasePositions.length; i++) {
-        await sleep(50);
-        eraserRender.style.left = erasePositions[i].x - eraserRender.offsetWidth / 2 + 'px';
-        eraserRender.style.top = erasePositions[i].y - eraserRender.offsetHeight / 2 + 'px';
-        context.lineTo(erasePositions[i].x, erasePositions[i].y);
-        context.stroke();
+      /**
+       * Recursively called with `setAnimationFrame`.
+       */
+      function erase(timestamp: number) {
+        if (isDrawing && !eraserSelected) {
+          eraserRender.style.display = 'none';
+          isErasing = false;
+          return;
+        }
+        //framerate using deltatime calculations
+        const elapsed = timestamp - lastTimestamp;
+        lastTimestamp = timestamp;
+        if (elapsed >= deltaTime) {
+          const erasePosition = lineBeingErased?.points.shift();
+          // if erasePosition is undefined, there are no more points remaining in the line to be erased.
+          // wait for a set amount of time and then erase the next line.
+          if (erasePosition === undefined) {
+            lineBeingErased = lines.shift();
+            if (lineBeingErased === undefined && !eraserSelected) {
+              // no more lines left to erase
+              timeoutId = setTimeout(() => {
+                eraserRender.style.display = 'none';
+              }, 750);
+              return;
+            }
+            timeoutId = setTimeout(() => {
+              requestAnimationFrame(erase);
+            }, 500);
+            return;
+          }
+          eraserRender.style.left = erasePosition.x - eraserRender.offsetWidth / 2 + 'px';
+          eraserRender.style.top = erasePosition.y - eraserRender.offsetHeight / 2 + 'px';
+          context.lineTo(erasePosition.x, erasePosition.y);
+          context.stroke();
+        }
+        if (!eraserSelected) requestAnimationFrame(erase);
       }
-      eraserRender.style.display = 'none';
+      // call the erase function to kick off the animation
+      requestAnimationFrame(function (timestamp) {
+        lastTimestamp = timestamp;
+        erase(timestamp);
+      });
     };
-    animate();
+    //set cursor to pencil after draw function has loaded
+    document.body.style.cursor =
+      ' url(https://uploads-ssl.webflow.com/633e177d0f2820c16e144992/63b63e3f6e90d840a1798c7a_pencil.png), auto';
+    // if someone dragged and selected items before canvas loaded in remove the selection
+    if (window.getSelection) {
+      window.getSelection().removeAllRanges();
+    }
+
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
 
     dragEraser(eraserRender);
 
@@ -135,6 +220,7 @@ window.Webflow.push(() => {
       function dragMouseDown(e) {
         e = e || window.event;
         e.preventDefault();
+        document.body.style.cursor = 'pointer';
         eraserSelected = true;
         canvasContainer.style.display = 'none';
         pos3 = e.clientX;
@@ -154,7 +240,7 @@ window.Webflow.push(() => {
         // set the element's new position:
         element.style.top = element.offsetTop - pos2 + 'px';
         element.style.left = element.offsetLeft - pos1 + 'px';
-        eraserRender.style.zIndex = '-1'; //needs to be under for mouseover to affect spans and images
+        eraserRender.style.pointerEvents = 'none';
         linkBlocks.forEach((element) => {
           element.style.zIndex = '-1';
         });
@@ -170,6 +256,8 @@ window.Webflow.push(() => {
       function closeDragElement() {
         // stop moving when mouse button is released:
         eraserSelected = false;
+        document.body.style.cursor =
+          ' url(https://uploads-ssl.webflow.com/633e177d0f2820c16e144992/63b63e3f6e90d840a1798c7a_pencil.png), auto';
         eraserRender.style.display = 'none';
         canvasContainer.style.display = 'block';
         for (let e of erasable) {
@@ -179,6 +267,7 @@ window.Webflow.push(() => {
         linkBlocks.forEach((element) => {
           element.style.zIndex = '2';
         });
+        eraserRender.style.pointerEvents = 'auto';
         document.onmouseup = null;
         document.onmousemove = null;
       }
