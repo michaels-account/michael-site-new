@@ -136,7 +136,7 @@ window.Webflow.push(() => {
       // add the line to the list of lines to erase
       lines.push(currentLine);
       //time in between brush strokes before eraser is activated
-      timeoutId = setTimeout(handleErase, 3000);
+      timeoutId = setTimeout(handleErase, 1750);
     }
 
     let lastTimestamp;
@@ -181,7 +181,7 @@ window.Webflow.push(() => {
         lastTimestamp = timestamp;
 
         // Calculate the desired frame rate, in frames per second
-        const frameRate = 60;
+        const frameRate = 30;
         // Calculate the desired frame duration, in milliseconds
         const frameDuration = 1000 / frameRate;
         // Calculate the desired amount of work to do each frame, based on the frame duration and the elapsed time
