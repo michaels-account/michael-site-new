@@ -34,7 +34,7 @@ window.Webflow.push(() => {
     // Set the canvas scaling for the context
     context.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-    const colours = ['#F24B3A', '#8C8C54', '#8324CE', '#919AF9', '#F77514', '#3939D3'];
+    const colours = ['#F24B3A', '577A3A', '#8324CE', '#919AF9', '#F77514', '#3939D3'];
     context.translate(0.5, 0.5);
     let colourIndex = 0;
 
