@@ -1,5 +1,3 @@
-import { greetUser } from '$utils/greet';
-
 interface Point {
   x: number;
   y: number;
@@ -19,6 +17,7 @@ window.Webflow.push(() => {
     const canvas = document.querySelector('.canvas_draw');
     const canvasContainer = document.querySelector('.canvas');
     const context = canvas.getContext('2d');
+    const starDivs = document.querySelectorAll('.star-div');
     canvasContainer.style.display = 'block';
     canvasContainer.style.pointerEvents = 'none';
 
@@ -181,7 +180,7 @@ window.Webflow.push(() => {
         lastTimestamp = timestamp;
 
         // Calculate the desired frame rate, in frames per second
-        const frameRate = 30;
+        const frameRate = 60;
         // Calculate the desired frame duration, in milliseconds
         const frameDuration = 1000 / frameRate;
         // Calculate the desired amount of work to do each frame, based on the frame duration and the elapsed time
@@ -267,6 +266,7 @@ window.Webflow.push(() => {
         linkBlocks.forEach((element) => {
           element.style.zIndex = '-1';
         });
+        eraseStars(e.clientX, e.clientY);
         for (let e of erasable) {
           e.addEventListener('mouseover', setOpacity);
         }
@@ -287,6 +287,9 @@ window.Webflow.push(() => {
           e.style.opacity = 1;
           e.removeEventListener('mouseover', setOpacity);
         }
+        for (let div of starDivs) {
+          div.style.opacity = 1;
+        }
         linkBlocks.forEach((element) => {
           element.style.zIndex = '2';
         });
@@ -294,6 +297,24 @@ window.Webflow.push(() => {
         document.onmouseup = null;
         document.onmousemove = null;
       }
+    }
+    // Detect when the mouse moves
+    function eraseStars(x, y) {
+      // Loop through the divs and check if the mouse is over each one
+      starDivs.forEach((div) => {
+        const rect = div.getBoundingClientRect();
+        const mouseX = x;
+        const mouseY = y;
+
+        if (
+          mouseX >= rect.left &&
+          mouseX <= rect.right &&
+          mouseY >= rect.top &&
+          mouseY <= rect.bottom
+        ) {
+          div.style.opacity = 0;
+        }
+      });
     }
   };
 });
