@@ -53,9 +53,9 @@ window.Webflow.push(() => {
 
     const linkBlocks = Array.from(document.getElementsByClassName('link-block'));
     //puts spans between each character for text on page so it they can be erased individually
-    $('.text-erasable').each(function (index) {
-      let characters = $(this).text().split('');
-      let splitCharacters = $(this);
+    $('.text-erasable').each(function () {
+      const characters = $(this).text().split('');
+      const splitCharacters = $(this);
       splitCharacters.empty();
       $.each(characters, function (i, el) {
         //splitCharacters.append('<span class="letter-' + i + '">' + el + '</span>');
@@ -64,7 +64,7 @@ window.Webflow.push(() => {
       erasable = document.getElementsByClassName('erasable');
     });
 
-    let lines: Line[] = [];
+    const lines: Line[] = [];
     let currentLine: Line;
 
     context.lineCap = 'round';
@@ -267,7 +267,7 @@ window.Webflow.push(() => {
           element.style.zIndex = '-1';
         });
         eraseStars(e.clientX, e.clientY);
-        for (let e of erasable) {
+        for (const e of erasable) {
           e.addEventListener('mouseover', setOpacity);
         }
       }
@@ -283,11 +283,11 @@ window.Webflow.push(() => {
           ' url(https://uploads-ssl.webflow.com/633e177d0f2820c16e144992/63b63e3f6e90d840a1798c7a_pencil.png), auto';
         eraserRender.style.display = 'none';
         canvasContainer.style.display = 'block';
-        for (let e of erasable) {
+        for (const e of erasable) {
           e.style.opacity = 1;
           e.removeEventListener('mouseover', setOpacity);
         }
-        for (let div of starDivs) {
+        for (const div of starDivs) {
           div.style.opacity = 1;
         }
         linkBlocks.forEach((element) => {
