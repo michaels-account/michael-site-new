@@ -18,6 +18,7 @@ window.Webflow.push(() => {
     const canvasContainer = document.querySelector('.canvas');
     const context = canvas.getContext('2d');
     const starDivs = document.querySelectorAll('.star-div');
+    const linkBlocks = Array.from(document.getElementsByClassName('link-block'));
     canvasContainer.style.display = 'block';
     canvasContainer.style.pointerEvents = 'none';
 
@@ -34,7 +35,7 @@ window.Webflow.push(() => {
     // Set the canvas scaling for the context
     context.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-    const colours = ['#F24B3A', '#577A3A', '#8324CE', '#919AF9', '#F77514', '#3939D3'];
+    const colours = ['#F24B3A', '#577A3A', '#8324CE', '#919AF9', '#F77514', '#3646f7'];
     context.translate(0.5, 0.5);
     let colourIndex = 0;
 
@@ -51,7 +52,7 @@ window.Webflow.push(() => {
     const eraserRender = document.querySelector('.eraser');
     eraserRender.style.display = 'none';
 
-    const linkBlocks = Array.from(document.getElementsByClassName('link-block'));
+
     //puts spans between each character for text on page so it they can be erased individually
     $('.text-erasable').each(function () {
       const characters = $(this).text().split('');
@@ -78,6 +79,9 @@ window.Webflow.push(() => {
     let timeoutId: number | undefined;
 
     function handleMouseDown(event) {
+      linkBlocks.forEach(linkBlock => {
+        linkBlock.classList.add('no-hover');
+      });
       event.preventDefault();
       //if erasing, delete all brush strokes on page and reset eraser
       if (isErasing) {
@@ -129,6 +133,9 @@ window.Webflow.push(() => {
     }
 
     function handleMouseUp() {
+      linkBlocks.forEach(linkBlock => {
+        linkBlock.classList.remove('no-hover');
+      });
       if (!isDrawing || eraserSelected) return;
       isDrawing = false;
       context.closePath();
@@ -316,5 +323,95 @@ window.Webflow.push(() => {
         }
       });
     }
+    
+// Loop through each link-block element
+linkBlocks.forEach(linkBlock => {
+  if (linkBlock.classList.contains('name-dates')) {
+  // Add a mouseover event listener to the link-block element
+  linkBlock.addEventListener('mouseover', () => {
+    if (isDrawing || isErasing)return;
+    // Get the sibling of the parent element with the class "text-erasable"
+    const siblingElement = linkBlock.parentNode.nextElementSibling;
+    // Get all the children of the sibling element with the class "text-erasable"
+    const textErasableElements = siblingElement.querySelectorAll('.text-erasable');
+    // Loop through each text-erasable element and change its text color
+    textErasableElements.forEach(textErasableElement => {
+      textErasableElement.style.color = colours[2]; // Change text color to red (you can use any color you want)
+    });
+    // Get the sibling of the parent element with the class "line"
+    const lineElement = siblingElement.nextElementSibling;
+    // Change the background color of the line element to red
+    lineElement.style.backgroundColor = colours[2]; // Change background color to red (you can use any color you want)
+    linkBlock.nextElementSibling.style.color = colours[2];
+    linkBlock.nextElementSibling.nextElementSibling.style.color = colours[2];
+  });
+
+  // Add a mouseout event listener to the link-block element
+  linkBlock.addEventListener('mouseout', () => {
+    if (isDrawing || isErasing)return;
+    // Get the sibling of the parent element with the class "text-erasable"
+    const siblingElement = linkBlock.parentNode.nextElementSibling;
+    // Get all the children of the sibling element with the class "text-erasable"
+    const textErasableElements = siblingElement.querySelectorAll('.text-erasable');
+    // Loop through each text-erasable element and reset its text color
+    textErasableElements.forEach(textErasableElement => {
+      textErasableElement.style.color = ''; // Reset text color to default (you can also use a specific color here)
+    });
+    // Get the sibling of the parent element with the class "line"
+    const lineElement = siblingElement.nextElementSibling;
+    // Change the background color of the line element to red
+    lineElement.style.backgroundColor = ''; // Change background color to red (you can use any color you want)
+    linkBlock.nextElementSibling.style.color = '';
+    linkBlock.nextElementSibling.nextElementSibling.style.color = '';
+  });
+}
+if (linkBlock.classList.contains('project-tag')) {
+  // Add a mouseover event listener to the link-block element
+  linkBlock.addEventListener('mouseover', () => {
+    if (isDrawing || isErasing)return;
+    // Get the sibling of the parent element with the class "text-erasable"
+    const siblingElement = linkBlock.parentNode.previousElementSibling;
+    // Get all the children of the sibling element with the class "text-erasable"
+    const textErasableElements = siblingElement.querySelectorAll('.text-erasable');
+    // Loop through each text-erasable element and change its text color
+    textErasableElements.forEach(textErasableElement => {
+      textErasableElement.style.color = colours[2]; // Change text color to red (you can use any color you want)
+    });
+    // Get the sibling of the parent element with the class "line"
+    const lineElement = linkBlock.parentNode.nextElementSibling;
+    // Change the background color of the line element to red
+    lineElement.style.backgroundColor = colours[2]; // Change background color to red (you can use any color you want)
+    const innerElements = linkBlock.nextElementSibling.querySelectorAll('.text-erasable');
+    // Loop through each text-erasable element and change its text color
+    innerElements.forEach(innerElement => {
+      innerElement.style.color = colours[2]; // Change text color to red (you can use any color you want)
+    });
+  });
+
+  // Add a mouseout event listener to the link-block element
+  linkBlock.addEventListener('mouseout', () => {
+    if (isDrawing || isErasing)return;
+    // Get the sibling of the parent element with the class "text-erasable"
+    const siblingElement = linkBlock.parentNode.previousElementSibling;
+    // Get all the children of the sibling element with the class "text-erasable"
+    const textErasableElements = siblingElement.querySelectorAll('.text-erasable');
+    // Loop through each text-erasable element and reset its text color
+    textErasableElements.forEach(textErasableElement => {
+      textErasableElement.style.color = ''; // Reset text color to default (you can also use a specific color here)
+    });
+    // Get the sibling of the parent element with the class "line"
+    const lineElement = linkBlock.parentNode.nextElementSibling;
+    // Change the background color of the line element to red
+    lineElement.style.backgroundColor = ''; // Change background color to red (you can use any color you want)
+    const innerElements = linkBlock.nextElementSibling.querySelectorAll('.text-erasable');
+    // Loop through each text-erasable element and change its text color
+    innerElements.forEach(innerElement => {
+      innerElement.style.color = ''; // Change text color to red (you can use any color you want)
+    });
+  });
+}
+});
+
+
   };
 });
