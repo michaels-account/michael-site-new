@@ -410,6 +410,41 @@ if (linkBlock.classList.contains('project-tag')) {
     });
   });
 }
+if (linkBlock.classList.contains('project-link')) {
+  // Add a mouseover event listener to the link-block element
+  linkBlock.addEventListener('mouseover', () => {
+    if (isDrawing || isErasing)return;
+    // Get the sibling of the parent element with the class "text-erasable"
+    const siblingElement = linkBlock.parentNode.nextElementSibling;
+    // Get all the children of the sibling element with the class "text-erasable"
+    const textErasableElements = siblingElement.querySelectorAll('.text-erasable');
+    // Loop through each text-erasable element and change its text color
+    textErasableElements.forEach(textErasableElement => {
+      textErasableElement.style.color = colours[2]; // Change text color to red (you can use any color you want)
+    });
+    // Get the sibling of the parent element with the class "line"
+    const lineElement = linkBlock.parentNode.nextElementSibling.querySelector('.line');
+    // Change the background color of the line element to red
+    lineElement.style.backgroundColor = colours[2]; // Change background color to red (you can use any color you want)
+  });
+
+  // Add a mouseout event listener to the link-block element
+  linkBlock.addEventListener('mouseout', () => {
+    if (isDrawing || isErasing)return;
+    // Get the sibling of the parent element with the class "text-erasable"
+    const siblingElement = linkBlock.parentNode.nextElementSibling;
+    // Get all the children of the sibling element with the class "text-erasable"
+    const textErasableElements = siblingElement.querySelectorAll('.text-erasable');
+    // Loop through each text-erasable element and reset its text color
+    textErasableElements.forEach(textErasableElement => {
+      textErasableElement.style.color = ''; // Reset text color to default (you can also use a specific color here)
+    });
+    // Get the sibling of the parent element with the class "line"
+    const lineElement = linkBlock.parentNode.nextElementSibling.querySelector('.line');
+    // Change the background color of the line element to red
+    lineElement.style.backgroundColor = ''; // Change background color to red (you can use any color you want)
+  });
+}
 });
 
 
